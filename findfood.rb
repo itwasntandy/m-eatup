@@ -28,14 +28,14 @@ def to_degrees(n)
   return d
 end
 
-def find_midpoint(lat1,long1,lat2,long2)
-  dlong = long2 - long1
+def find_midpoint(a1,a2)
+  dlong = a2[1] - a1[1]
   
-  bx = Math.cos(lat2) * Math.cos(dlong)
-  by = Math.cos(lat2) * Math.sin(dlong)
+  bx = Math.cos(a2[0]) * Math.cos(dlong)
+  by = Math.cos(a2[0]) * Math.sin(dlong)
  
-  latmid = to_degrees(Math.atan2((Math.sin(lat1) + Math.sin(lat2)), Math.sqrt(( Math.cos(lat1)+bx)**2 + by**2)))
-  longmid = to_degrees(long1 + Math.atan2(by, Math.cos(lat1) + bx))
+  latmid = Math.atan2((Math.sin(a1[0]) + Math.sin(a2[0])), Math.sqrt(( Math.cos(a1[0])+bx)**2 + by**2))
+  longmid = a1[1] + Math.atan2(by, Math.cos(a1[0]) + bx)
   return [latmid, longmid]
 end
 
@@ -45,24 +45,39 @@ get '/lookup' do
   if addresses.length < 2
     "Error: not enough addresses sent"
   end
-  addresses.map! {|a| Geokit::Geocoders::GoogleGeocoder.geocode(a)}
-  
+  addresses.map! { |a| 
+    result = Geokit::Geocoders::GoogleGeocoder.geocode(a)
+    [to_radians(result.lat), to_radians(result.lng)]
+  }
+  addresses.sort!
   #set a default foodtype to indian
   foodtype = "indian"
   foodtype = params.fetch("type")
 
-  lat1 = to_radians(addresses[0].lat)
-  lat2 = to_radians(addresses[1].lat)
-  long1 = to_radians(addresses[0].lng)
-  long2 = to_radians(addresses[1].lng)
-
-  midpoint = find_midpoint(lat1,long1,lat2,long2)
+  midpoints = []
   
+  0.upto(addresses.length - 2) do |index|
+    a1 = addresses[index]
+    a2 = addresses[index + 1]
+    midpoints << find_midpoint(a1, a2)
+  end 
+ 
+  while midpoints.length != 1 do
+    a = midpoints.sort
+    midpoints = []
+    0.upto(a.length - 2 ) do |index|
+      a1 = a[index]
+      a2 = a[index + 1]
+      midpoints << find_midpoint(a1, a2)
+    end
+  end
+      
+
   client = Yelp::Client.new
   request = Yelp::V2::Search::Request::GeoPoint.new(
               :term => foodtype,
-              :latitude => midpoint[0],
-              :longitude => midpoint[1],
+              :latitude => to_degrees(midpoints[0][0]),
+              :longitude => to_degrees(midpoints[0][1]),
               :limit => 1,
               :category => "food"
                )
