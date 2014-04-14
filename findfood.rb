@@ -41,22 +41,20 @@ end
 
 get '/lookup' do
   content_type :json
-  "you asked for #{params} is that what you meant?"
-  if !(params.fetch("address1").empty? || params.fetch("address2").empty?)
-    "You haven't added valid addresses"
+  addresses = params.fetch("address")
+  if addresses.length < 2
+    "Error: not enough addresses sent"
   end
-  address1 = URI.unescape(params.fetch("address1"))
-  address2 = URI.unescape(params.fetch("address2"))
+  addresses.map! {|a| Geokit::Geocoders::GoogleGeocoder.geocode(a)}
+  
   #set a default foodtype to indian
   foodtype = "indian"
-  first_addr = Geokit::Geocoders::GoogleGeocoder.geocode(address1)
-  second_addr = Geokit::Geocoders::GoogleGeocoder.geocode(address2)
-  foodtype = URI.unescape(params.fetch("type"))
+  foodtype = params.fetch("type")
 
-  lat1 = to_radians(first_addr.lat)
-  lat2 = to_radians(second_addr.lat)
-  long1 = to_radians(first_addr.lng)
-  long2 = to_radians(second_addr.lng)
+  lat1 = to_radians(addresses[0].lat)
+  lat2 = to_radians(addresses[1].lat)
+  long1 = to_radians(addresses[0].lng)
+  long2 = to_radians(addresses[1].lng)
 
   midpoint = find_midpoint(lat1,long1,lat2,long2)
   
