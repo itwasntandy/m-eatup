@@ -28,22 +28,34 @@ def to_degrees(n)
   return d
 end
 
-def find_midpoint(a1,a2)
-  dlong = a2[1] - a1[1]
+def loop_midpoints(addr)
+  midpoints = []
+  0.upto(addr.length - 2 ) do | index|
+    addr1 = addr[index]
+    addr2 = addr[index + 1]
+    midpoints << find_midpoint(addr1,addr2)
+  end
+  return midpoints
+end
+
+def find_midpoint(addr1,addr2)
+  dlong = addr2[1] - addr1[1]
   
-  bx = Math.cos(a2[0]) * Math.cos(dlong)
-  by = Math.cos(a2[0]) * Math.sin(dlong)
+  bx = Math.cos(addr2[0]) * Math.cos(dlong)
+  by = Math.cos(addr2[0]) * Math.sin(dlong)
  
-  latmid = Math.atan2((Math.sin(a1[0]) + Math.sin(a2[0])), Math.sqrt(( Math.cos(a1[0])+bx)**2 + by**2))
-  longmid = a1[1] + Math.atan2(by, Math.cos(a1[0]) + bx)
+  latmid = Math.atan2((Math.sin(addr1[0]) + Math.sin(addr2[0])), Math.sqrt(( Math.cos(addr1[0])+bx)**2 + by**2))
+  longmid = addr1[1] + Math.atan2(by, Math.cos(addr1[0]) + bx)
   return [latmid, longmid]
 end
+
+error { @error = request.env['sinatra_error'] ; haml :'500' }
 
 get '/lookup' do
   content_type :json
   addresses = params.fetch("address")
   if addresses.length < 2
-    "Error: not enough addresses sent"
+    raise error, "Error: not enough addresses sent"
   end
   addresses.map! { |a| 
     result = Geokit::Geocoders::GoogleGeocoder.geocode(a)
@@ -55,21 +67,13 @@ get '/lookup' do
   foodtype = params.fetch("type")
 
   midpoints = []
-  
-  0.upto(addresses.length - 2) do |index|
-    a1 = addresses[index]
-    a2 = addresses[index + 1]
-    midpoints << find_midpoint(a1, a2)
-  end 
  
-  while midpoints.length != 1 do
-    a = midpoints.sort
-    midpoints = []
-    0.upto(a.length - 2 ) do |index|
-      a1 = a[index]
-      a2 = a[index + 1]
-      midpoints << find_midpoint(a1, a2)
-    end
+  midpoints = loop_midpoints(addresses)
+
+ 
+  while midpoints.length > 1 do
+    addr = midpoints.sort!
+    midpoints = loop_midpoints(addr)
   end
       
 
@@ -79,7 +83,8 @@ get '/lookup' do
               :latitude => to_degrees(midpoints[0][0]),
               :longitude => to_degrees(midpoints[0][1]),
               :limit => 1,
-              :category => "food"
+              :sort => 2,
+              :category => "restaurants"
                )
  
   response = client.search(request)
