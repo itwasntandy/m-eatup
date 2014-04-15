@@ -7,8 +7,8 @@
 #Also in the future it would be good to hook up to a routing API, as the geographic midpoint may in some cases take longer to get to then going from point A to point B.
 #and this will allow people to specify method of travel too.
 #i.e. Andrew is happy to go by foot, car or public transport
-#Thom is happy to go by foot, bicyle or public transport
-#Dave is happy to go by public transport, and walk no more than 10 minutes
+#Will is happy to go by foot, bicyle or public transport
+#Harry is happy to go by public transport, and walk no more than 10 minutes
 #
 #
 #longer term it will enable someone to create an event, and have people "sign up" to that event with the dates they can make and their addresses
