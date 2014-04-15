@@ -29,8 +29,8 @@ require 'uri'
 require 'mysql2'
 require 'yaml'
 
-# Decided it would be a good idea to move the config variabels out of the main app
-# so this is done throug reading a yaml file and creating a hash of hashes for this.
+#Decided it would be a good idea to move the config variabels out of the main app
+#so this is done throug reading a yaml file and creating a hash of hashes for this.
 #
 #Currently it needs the config file to be named config.yml and for it to be in the same
 #directory as the running app.
@@ -38,14 +38,14 @@ require 'yaml'
 #The config file needs to contain credentials for all the remote services used.
 #
 #You can sign up for a YELP developer account here: http://www.yelp.com/developers
-#you can sign up for a free MySQL db (from the free tier) with AWS: http://aws.amazon.com/rds/
+#you can sign up for a MySQL db (from the free tier) with AWS: http://aws.amazon.com/rds/
 #
-# database:
+# :database:
 #   :host: "localhost"
 #   :user: "username"
 #   :passwd: "password"
 #   :dbname: "m_eatup"
-# yelp:
+# :yelp:
 #   :ywsid: ""
 #   :consumer_key: ""
 #   :consumer_secret: ""
@@ -57,18 +57,18 @@ rawconfig = File.read(approot + "/config.yml")
 config = YAML.load(rawconfig)
 
 
-client = Mysql2::Client.new(:host => config["database"][:host],
-                            :username => config["database"][:user],
-                            :password => config["database"][:passwd],
-                            :database => config["database"][:dbname]
+client = Mysql2::Client.new(:host => config[:database][:host],
+                            :username => config[:database][:user],
+                            :password => config[:database][:passwd],
+                            :database => config[:database][:dbname]
                            )
 
  
-Yelp.configure(:yws_id => config["yelp"][:ywsid],
-               :consumer_key => config["yelp"][:consumer_key],
-               :consumer_secret => config["yelp"][:consumer_secret],
-               :token => config["yelp"][:token],
-               :token_secret => config["yelp"][:token_secret])
+Yelp.configure(:yws_id => config[:yelp][:ywsid],
+               :consumer_key => config[:yelp][:consumer_key],
+               :consumer_secret => config[:yelp][:consumer_secret],
+               :token => config[:yelp][:token],
+               :token_secret => config[:yelp][:token_secret])
 
 
 #two simple methods to convert from radians into degrees and vice versa
@@ -174,7 +174,6 @@ get '/lookup' do
     midpoints = loop_midpoints(addr)
   end
       
-
    
   # call out to Yelp using the yelpster gem to find a restaurant of the right type close to our midpoint
   # we call midpoints[0] because that's the first (and only remaining) element int he midpoint array
@@ -196,6 +195,7 @@ get '/lookup' do
   response = client.search(request)
   #finally we output with some text.
   #this bit is still TBD, with some basic output given for debugging purposes
-  "the best restaurant to go to is #{response.fetch("businesses")[0].fetch("name")} and its address is #{response.fetch("businesses")[0].                 fetch("location").fetch("address")[0]}  #{response.fetch("businesses")[0].fetch("location").fetch("postal_code")}"
+  #"the best restaurant to go to is #{response.fetch("businesses")[0].fetch("name")} and its address is #{response.fetch("businesses")[0].                 fetch("location").fetch("address")[0]}  #{response.fetch("businesses")[0].fetch("location").fetch("postal_code")}"
+  "#{response.fetch('businesses')[0]}"
 
 end
