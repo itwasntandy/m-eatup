@@ -1,22 +1,54 @@
+#This is a simple app to try to find the best place for a group of friends to meet up and eat.
+#it'll take input in the form of a bunch of address[] parameters in a uri query string and 
+#food type via the optional foodtype parameter.
+#
+#In the future it should deal with edge cases better - eg. the midpoint between london and paris is over the sea, so there is no restaurant close to the midpoint.
+#
+#Also in the future it would be good to hook up to a routing API, as the geographic midpoint may in some cases take longer to get to then going from point A to point B.
+#and this will allow people to specify method of travel too.
+#i.e. Andrew is happy to go by foot, car or public transport
+#Thom is happy to go by foot, bicyle or public transport
+#Dave is happy to go by public transport, and walk no more than 10 minutes
+#
+#
+#longer term it will enable someone to create an event, and have people "sign up" to that event with the dates they can make and their addresses
+#and this will be used to schedule events, sending out directions to each person, and reminders prior to the event.
+#
+#Once all that is done, being able to hook up to the OpenTable API to book a table on the scheduled date for everyone who can make it, at the appropriate restaurant
+#would be the icing on the cake.
+#
+
+
+
 require 'sinatra'
 require 'cgi'
 require 'json'
 require 'geokit'
 require 'yelpster'
 require 'uri'
+require 'mysql2'
+require 'yaml'
 
-YELP_YWSID = "***REMOVED***"
+# Decided it would be a good idea to move the config variabels out of the main app
+# so this is done throug reading a yaml file and creating a hash of hashes for this.
+#
+approot = File.expand_path(File.dirname(__FILE__))
+rawconfig = File.read(approot + "/config.yml")
+config = YAML.load(rawconfig)
+
+
+client = Mysql2::Client.new(:host => config["database"][:host],
+                            :username => config["database"][:user],
+                            :password => config["database"][:passwd],
+                            :database => config["database"][:dbname]
+                           )
+
  
-YELP_CONSUMER_KEY = "***REMOVED***"
-YELP_CONSUMER_SECRET = "***REMOVED***"
-YELP_TOKEN = "***REMOVED***"
-YELP_TOKEN_SECRET = "***REMOVED***"
- 
-Yelp.configure(:yws_id => YELP_YWSID,
-               :consumer_key => YELP_CONSUMER_KEY,
-               :consumer_secret => YELP_CONSUMER_SECRET,
-               :token => YELP_TOKEN,
-               :token_secret => YELP_TOKEN_SECRET)
+Yelp.configure(:yws_id => config["yelp"][:ywsid],
+               :consumer_key => config["yelp"][:consumer_key],
+               :consumer_secret => config["yelp"][:consumer_secret],
+               :token => config["yelp"][:token],
+               :token_secret => config["yelp"][:token_secret])
 
 
 #two simple methods to convert from radians into degrees and vice versa
@@ -135,6 +167,7 @@ get '/lookup' do
               :term => foodtype,
               :latitude => to_degrees(midpoints[0][0]),
               :longitude => to_degrees(midpoints[0][1]),
+              :radius_filter => 40000,
               :limit => 1,
               :sort => 2,
               :category => "restaurants"
