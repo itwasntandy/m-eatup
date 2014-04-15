@@ -70,7 +70,6 @@ end
 
 error { @error = request.env['sinatra_error'] ; haml :'500' }
 
-
 #example URL:
 #http://localhost:4567/lookup?address[]=ec1v4ex&address[]=co43sq&address[]=wc1b5ha&type=thai#env-info
 
@@ -97,25 +96,27 @@ get '/lookup' do
   # addresses = [[0.9054167399564751, 0.016493853614195475], [0.8993943033488851, -0.0018665476045330916]]
   addresses.map! do |a| 
     result = Geokit::Geocoders::GoogleGeocoder.geocode(a)
-    [to_radians(result.lat), to_radians(result.lng)]
+    if ((result.lat).kind_of? Float ) && ((result.lng).kind_of? Float)
+       [to_radians(result.lat), to_radians(result.lng)]
+    else
+      raise error, "Error #{a} is not a valid address input."
+    end
   end 
 
   # manipulate the addresses array again, this time to get the coordinates sorted.
   addresses.sort!
 
-  #set a default foodtype to indian because its the most popular type of food in the uk
-  #http://wiki.answers.com/Q/What_is_the_most_popular_dish_in_the_UK
+  #if food type is specified, then use it, otherwise, just rely on yelp to
+  #make a good choice!
   #
-  #However override if if a type parameter is passed.
-  foodtype = "indian"
-  foodtype = params.fetch("type")
+  foodtype = params.fetch("type", "")
 
   # create the midpoints array based on an initial looping through the addresses array to find the midpoints there 
-  # midpoints is actually an nested array, because 
+  # midpoints is a nested array like addresses became above.
   midpoints = loop_midpoints(addresses)
 
   # if the length of the midpoint array is already 1, due to only 2 addresses being passed the below will be skipped
-  # Otherwise keep iterating through the midpoints, until it is 1.
+  # Otherwise keep iterating through the midpoints, until there is 1.
   while midpoints.length > 1 do
     addr = midpoints.sort!
     midpoints = loop_midpoints(addr)
