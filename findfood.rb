@@ -32,6 +32,26 @@ require 'yaml'
 # Decided it would be a good idea to move the config variabels out of the main app
 # so this is done throug reading a yaml file and creating a hash of hashes for this.
 #
+#Currently it needs the config file to be named config.yml and for it to be in the same
+#directory as the running app.
+#
+#The config file needs to contain credentials for all the remote services used.
+#
+#You can sign up for a YELP developer account here: http://www.yelp.com/developers
+#you can sign up for a free MySQL db (from the free tier) with AWS: http://aws.amazon.com/rds/
+#
+# database:
+#   :host: "localhost"
+#   :user: "username"
+#   :passwd: "password"
+#   :dbname: "m_eatup"
+# yelp:
+#   :ywsid: ""
+#   :consumer_key: ""
+#   :consumer_secret: ""
+#   :token: ""
+#   :token_secret: ""
+
 approot = File.expand_path(File.dirname(__FILE__))
 rawconfig = File.read(approot + "/config.yml")
 config = YAML.load(rawconfig)
