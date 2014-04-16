@@ -40,35 +40,35 @@ require 'yaml'
 #You can sign up for a YELP developer account here: http://www.yelp.com/developers
 #you can sign up for a MySQL db (from the free tier) with AWS: http://aws.amazon.com/rds/
 #
-# :database:
-#   :host: "localhost"
-#   :user: "username"
-#   :passwd: "password"
-#   :dbname: "m_eatup"
-# :yelp:
-#   :ywsid: ""
-#   :consumer_key: ""
-#   :consumer_secret: ""
-#   :token: ""
-#   :token_secret: ""
+# database:
+#   host: "localhost"
+#   user: "username"
+#   passwd: "password"
+#   dbname: "m_eatup"
+# yelp:
+#   ywsid: ""
+#   consumer_key: ""
+#   consumer_secret: ""
+#   token: ""
+#   token_secret: ""
 
 approot = File.expand_path(File.dirname(__FILE__))
 rawconfig = File.read(approot + "/config.yml")
 config = YAML.load(rawconfig)
 
 
-client = Mysql2::Client.new(:host => config[:database][:host],
-                            :username => config[:database][:user],
-                            :password => config[:database][:passwd],
-                            :database => config[:database][:dbname]
+client = Mysql2::Client.new(:host => config["database"]["host"],
+                            :username => config["database"]["user"],
+                            :password => config["database"]["passwd"],
+                            :database => config["database"]["dbname"]
                            )
 
  
-Yelp.configure(:yws_id => config[:yelp][:ywsid],
-               :consumer_key => config[:yelp][:consumer_key],
-               :consumer_secret => config[:yelp][:consumer_secret],
-               :token => config[:yelp][:token],
-               :token_secret => config[:yelp][:token_secret])
+Yelp.configure(:yws_id => config["yelp"]["ywsid"],
+               :consumer_key => config["yelp"]["consumer_key"],
+               :consumer_secret => config["yelp"]["consumer_secret"],
+               :token => config["yelp"]["token"],
+               :token_secret => config["yelp"]["token_secret"])
 
 
 #two simple methods to convert from radians into degrees and vice versa
