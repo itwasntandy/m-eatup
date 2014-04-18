@@ -85,12 +85,10 @@ end
 
 def find_midpoint(addr1,addr2)
   # addr1 and addr2 are arrays in the format of [latitude,longitude], as that seems to be the normal convention.
-
   # this is actually finding the midpoint of the great circle that addr1 and addr2 live on.
   # my maths was rusty, as its 14 years since I quit my UG degree, so I was prompted by
   # http://mathforum.org/library/drmath/view/51822.html
   # to help with the formula.
-  #
   # it requires coordinates to be expressed in radians.
 
   dlong = addr2[1] - addr1[1]
@@ -103,7 +101,6 @@ def find_midpoint(addr1,addr2)
   longmid = addr1[1] + Math.atan2(by, Math.cos(addr1[0]) + bx)
   return [latmid, longmid]
 end
-
 
 # With N number of coordinates we want to be able to loop through them to get down to a final set of coordinates for midpoints
 # the method below will take a set of coordinates in the form of an array, find the midpoints between the pairs.
@@ -118,6 +115,38 @@ def loop_midpoints(addr)
   end
   return midpoints
 end
+
+# Sometimes just searching for the inputted string will not return the answers we want, so it becomes necessary to refine the string
+# Long term this will probably be enhanced to use the category list from yelp as a basis:
+# http://www.yelp.co.uk/developers/documentation/category_list
+# although that said the yelp category filter doesn't appear to be too reliable.
+
+def refine_food(food)  
+  case food["type"]
+  when /thai/i
+    food["category"] << "thai"
+    food["type"] = "thai restaurant"
+  when /indian|curry/i
+    food["category"] << "indpak"
+  when /french|france/i
+    food["category"] << "french"
+    food["type"] ="french restaurant"
+  when /italian|italy|italia/i
+    food["category"] << "italian"
+    food["type"] = "italian restaurant"
+   when /fish|seafood/i
+    if (food["type"] =~ /chips/i)
+      then food["category"] << "fishnchips"
+      else
+        food["category"] << "seafood"
+        food["type"] = "fish restaurant"
+    end
+  end
+  return food
+end
+
+
+
 
 
 error { @error = request.env['sinatra_error'] ; haml :'500' }
@@ -162,25 +191,7 @@ get '/lookup' do
 
   # manipulate the addresses array again, this time to get the coordinates sorted.
   addresses.sort!
-
-  #if food type is specified, then use it, otherwise, just rely on yelp to
-  #make a good choice!
-  #If food type is one of a popular type, then specify that as a filter, otherwise rely on yelp's search prowess.
-  foodtype = params.fetch("type", "")
-  foodcategory="restaurants"
-  case params.fetch("type")
-  when /thai/i
-    foodcategory="restaurants,thai"
-    foodtype="thai"
-  when /indian|curry/i
-    foodcategory="restaurants,indpak"
-    foodtype="indian"
-  end
-
-
-
-
-
+  
   # create the midpoints array based on an initial looping through the addresses array to find the midpoints there 
   # midpoints is a nested array like addresses became above.
   midpoints = loop_midpoints(addresses)
@@ -191,22 +202,45 @@ get '/lookup' do
     addr = midpoints.sort!
     midpoints = loop_midpoints(addr)
   end
-      
+ 
+  #if food type is specified, then use it, otherwise, set the term to restaurant and rely on yelp
+  #make a good choice!
+  #If food type is one of a popular type, then specify that as a filter, otherwise rely on yelp's search prowess.
+  #we default to a food category of restaurants to try to avoid take away joints, and then augmnet it with further categories
+  #if we detect a popular type.
+  #That said Yelp's category filter seems a little unreliable in testing, so a TBD to improve upon that.
+  #I've found in testing that sometimes searching or what you think is a simple enough request (e.g. french restaurant in paris, or thai restauraunt
+  #in rome, that you can end up getting unpredictable results
+  #For example with category "restaurants" or "restaurants,french" that you would get back quite useless results e.g. 
+  #/lookup?address[]=75011,Paris&address[]=75004,Paris&type=french would return
+  # a link to the Place Des Voges park.
+  # By experimenting it has been discovered that overriding this with the string "french restaurant" as the term delivers the correct result.
+  # similarly searching for "thai" in rome, returns by default a massage palour. Augumenting thestring with restaurant again helps here.
+  food = Hash.new
+  food["category"] = "[restaurants]"
+  if params.has_key?("type")
+    food["type"] = params.fetch("type")
+    food = refine_food(food)
+  else
+    food["type"] = "restaurant"
+  end
+
   # call out to Yelp using the yelpster gem to find a restaurant of the right type close to our midpoint
   # we call midpoints[0] because that's the first (and only remaining) element int he midpoint array
   # and pass the lat and long in accordingly.
   # we specify limit of 1, as we just want the first returned restaurant for now
-  # we specify sort type of 2, which says to return the highest rated
-  # and we specify the category of restaurants, as we don't want take away joints
+  # we specify sort type of 1 which is to find the closest (recommended) one to our location
+  # This because we specify a wide search radius to deal with cases where the midpoint may be a little away
+  # from the nearest civilization!
   client = Yelp::Client.new
   request = Yelp::V2::Search::Request::GeoPoint.new(
-              :term => foodtype,
+              :term => food["type"],
               :latitude => to_degrees(midpoints[0][0]),
               :longitude => to_degrees(midpoints[0][1]),
-              :radius_filter => 40000,
               :limit => 1,
-              :sort => 2,
-              :category => foodcategory
+              :radius =>40000,
+              :sort => 1,
+              :category => food["category"]
                )
  
   response = client.search(request)
