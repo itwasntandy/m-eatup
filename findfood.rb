@@ -67,6 +67,7 @@ if config.has_key?("yelp")
 else
   raise "Could not find yelp configuration"
 end
+
 #create a configured db client
 # if for some reason the db fails during initialisation we don't want to just die
 # the logging for now is a nice to have so we can fall back to not having it.
@@ -221,7 +222,6 @@ rescue
   addressid = 'NO_DB'
   return addressid
 end
-
 def log_address_coordinates(dbclient,addressid,coordinates)
   dbclient.query("insert into address_coordinates (addressid,coordinates) values(#{addressid},\'#{coordinates}\')")
   addresscoordid = dbclient.last_id
@@ -251,7 +251,6 @@ error { @error = request.env['sinatra_error'] ; haml :'500' }
 
 #example URL:
 #http://localhost:4567/lookup?address[]=ec1v4ex&address[]=co43sq&address[]=wc1b5ha&type=thai#env-info
-
 get '/lookup' do
   content_type :json
  
