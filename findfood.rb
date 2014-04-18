@@ -68,18 +68,50 @@ else
   raise "Could not find yelp configuration"
 end
 
-#create a configured db client
-# if for some reason the db fails during initialisation we don't want to just die
-# the logging for now is a nice to have so we can fall back to not having it.
-logging = 1
-begin  
-  dbclient = Mysql2::Client.new(:host => config["database"]["host"],
-                              :username => config["database"]["user"],
-                              :password => config["database"]["passwd"],
-                              :database => config["database"]["dbname"]
-                             )
-rescue 
-  logging = 0
+class DBLogger
+  attr_accessor :dbclient
+  def initialize(config)
+    @dbclient =  Mysql2::Client.new(:host => config["host"],
+                                    :username => config["user"],
+                                    :password => config["passwd"],
+                                    :database => config["dbname"]
+                                   )
+  end
+ 
+  #A number of simple methods to log various steps along the way to a database.
+  #Right now I have 5 tables:
+  #events (eventid INT AUTO_INCREMENT,request_time TIMESTAMP, foodtype VARCHAR(256))
+  #addresses (addressid INT AUTO_INCREMENT, eventid INT,address VARCHAR(256))
+  #address_coordinates (addresscoordid INT AUTO_INCREMENT,addressid INT ,coordinates VARCHAR(100))
+  #midpoints (midpointid INT AUTO_INCREMENT, eventid INT, coordinates VARCHAR(100))
+  #results (resultid INT AUTO_INCREMENT, eventid INT, result_name VARCHAR(100), result_address VARCHAR(256))
+  #In terms of the naming of the methods for each request we have:
+  #  1 event
+  #  multiple addresses
+  #  multiple address coordinates
+  #  1 final midpoint
+  #  1 result
+  # That has determined how I named these methods.
+  def event(food)
+    dbclient.query("insert into events(foodtype) values (\'#{food['type']}\')") rescue nil
+    dbclient.last_id rescue nil
+  end
+  def addresses(eventid,address)
+    dbclient.query("insert into addresses(eventid,address) values(#{eventid},\'#{address}\')") rescue nil
+    dbclient.last_id rescue nil
+  end
+  def address_coordinates(addressid,coordinates)
+    dbclient.query("insert into address_coordinates (addressid,coordinates) values(#{addressid},\'#{coordinates}\')") rescue nil
+    dbclient.last_id rescue nil
+  end
+  def midpoint(eventid,coordinates)
+    dbclient.query("insert into midpoints (eventid,coordinates) values(#{eventid},\'#{coordinates}\')") rescue nil
+    dbclient.last_id rescue nil
+  end
+  def result(eventid,results)
+    dbclient.query("insert into results (eventid,result_name,result_address) value (#{eventid},\'#{results['name']}\',\'#{results['location']['display_address']}\')") rescue nil
+    dbclient.last_id rescue nil
+  end
 end
 
 #two simple methods to convert from radians into degrees and vice versa
@@ -92,6 +124,7 @@ def to_degrees(n)
   return d
 end
 
+
 #Method to take in array of addresses (input_addresses) and transform them into
 #an array of coordinates in radian format, so that they can be used to find the midpoint later.
 #An input_address array containing
@@ -100,32 +133,21 @@ end
 # addresses = [[0.9054167399564751, 0.016493853614195475], [0.8993943033488851, -0.0018665476045330916]]
 # Again this will log to databases along the way so as to enable debugging of any problems and 
 # enable the results to be used to improve future requests.
-def map_addresses(dbclient,eventid,logging,input_addresses)
-  addresses = input_addresses.map do |a| 
-    if (logging == 1 )
-      addressid = log_addresses(dbclient,eventid,a)
-      if (addressid == "NO_DB")
-        logging = 0
-      end
-    end
+def map_addresses(log,eventid,input_addresses)
+  input_addresses.map do |a| 
+    addressid = log.addresses(eventid,a)
     begin
       result = Geokit::Geocoders::GoogleGeocoder.geocode(a)
     rescue
       raise error "GeoError: Either there is a problem reaching Google maps or the input is invalid #{a}"
     end
     if ((result.lat).kind_of? Float ) && ((result.lng).kind_of? Float)
-     if (logging == 1 ) 
-       addresscoordid = log_address_coordinates(dbclient,addressid,[to_radians(result.lat),to_radians(result.lng)])
-       if (addresscoordid == "NO_DB")
-         logging = 0
-       end
-     end
+     log.address_coordinates(addressid,[to_radians(result.lat),to_radians(result.lng)])
      [to_radians(result.lat), to_radians(result.lng)]
     else
       raise error "Validation Error: #{a} is not a valid address input."
     end
-  end 
-  return addresses
+  end
 end
 
 # Find the midpoint between two coordinates.
@@ -192,60 +214,8 @@ def refine_food(food)
   return food
 end
 
-#A number of simple methods to log various steps along the way to a database.
-#Right now I have 5 tables:
-#events (eventid INT AUTO_INCREMENT,request_time TIMESTAMP, foodtype VARCHAR(256))
-#addresses (addressid INT AUTO_INCREMENT, eventid INT,address VARCHAR(256))
-#address_coordinates (addresscoordid INT AUTO_INCREMENT,addressid INT ,coordinates VARCHAR(100))
-#midpoints (midpointid INT AUTO_INCREMENT, eventid INT, coordinates VARCHAR(100))
-#results (resultid INT AUTO_INCREMENT, eventid INT, result_name VARCHAR(100), result_address VARCHAR(256))
-#In terms of the naming of the methods for each request we have:
-#  1 event
-#  multiple addresses
-#  multiple address coordinates
-#  1 final midpoint
-#  1 result
-# That has determined how I named these methods.
-def log_event(dbclient,food)
-  dbclient.query("insert into events(foodtype) values (\'#{food['type']}\')")
-  eventid = dbclient.last_id
-  return eventid
-rescue
-  eventid = 'NO_DB'
-  return eventid
-end
-def log_addresses(dbclient,eventid,address)
-  dbclient.query("insert into addresses(eventid,address) values(#{eventid},\'#{address}\')")
-  addressid = dbclient.last_id
-  return addressid
-rescue
-  addressid = 'NO_DB'
-  return addressid
-end
-def log_address_coordinates(dbclient,addressid,coordinates)
-  dbclient.query("insert into address_coordinates (addressid,coordinates) values(#{addressid},\'#{coordinates}\')")
-  addresscoordid = dbclient.last_id
-  return addresscoordid
-rescue
-  addresscoordid = 'NO_DB'
-  return addresscoordid
-end
-def log_midpoint(dbclient,eventid,coordinates)
-  dbclient.query("insert into midpoints (eventid,coordinates) values(#{eventid},\'#{coordinates}\')")
-  midpointid = dbclient.last_id
-  return midpointid
-rescue
-  midpointid = 'NO_DB'
-  return midpointid
-end
-def log_result(dbclient,eventid,results)
-  dbclient.query("insert into results (eventid,result_name,result_address) value (#{eventid},\'#{results['name']}\',\'#{results['location']['display_address']}\')")
-  resultid = dbclient.last_id
-  return resultid
-rescue
-  resultid = 'NO_DB'
-  return resultid
-end
+
+log = DBLogger.new(config["database"])
 
 error { @error = request.env['sinatra_error'] ; haml :'500' }
 
@@ -267,12 +237,7 @@ get '/lookup' do
     food["type"] = "restaurant"
   end
 
-  if (logging == 1 )
-    eventid = log_event(dbclient,food)
-    if (eventid == "NO_DB")
-      logging = 0
-    end
-  end
+  eventid = log.event(food)
   #create an array containing all the addresses inputted
   #n.b. when making a query manually you need to pass parameters in the form of:
   #address[]=ec1v4ex&address[]=co43sq .. because otherwise sinatra creates a string named address
@@ -290,7 +255,7 @@ get '/lookup' do
 
   # Create an addresses array from the input_addresses array by converting the postcodes or addresses into coordinates in the form of radians.
   # we call the map_addresses method defined above to do this.
-  addresses = map_addresses(dbclient,eventid,logging,input_addresses)
+  addresses = map_addresses(log,eventid,input_addresses)
   # manipulate the addresses array again, this time to get the coordinates sorted.
   addresses.sort!
   
@@ -305,12 +270,7 @@ get '/lookup' do
     addr = midpoints.sort!
     midpoints = loop_midpoints(addr)
   end
-  if (logging == 1 )
-    midpointid = log_midpoint(dbclient,eventid,midpoints[0])
-    if (midpointid == "NO_DB")
-      logging = 0 
-    end
-  end   
+  log.midpoint(eventid,midpoints[0])
 
   # call out to Yelp using the yelpster gem to find a restaurant of the right type close to our midpoint
   # we call midpoints[0] because that's the first (and only remaining) element int he midpoint array
@@ -341,12 +301,7 @@ get '/lookup' do
   #We catch the case if the search doesn't return any result.
   #Again we log the put from this, so we can analyze it later.
   if response.has_key?('businesses')
-    if (logging == 1)
-      responseid = log_result(dbclient,eventid,response['businesses'][0])
-      if (responseid == "NO_DB")
-        logging = 0
-      end
-    end
+    log.result(eventid,response['businesses'][0])
     "#{response.fetch('businesses')[0]}"
   else
     raise error "Search Error: No results found near your midpoint which was determined to be #{to_degrees(midpoints[0][0])}, #{to_degrees(midpoints[0][1])}"
