@@ -132,11 +132,16 @@ get '/lookup' do
   #n.b. when making a query manually you need to pass parameters in the form of:
   #address[]=ec1v4ex&address[]=co43sq .. because otherwise sinatra creates a string named address
   #rather than an array
-  addresses = params.fetch("address")
+
+  if params.has_key?("address")
+    addresses = params.fetch("address")
+  else
+    raise error "Input Error: no addresses inputted"
+  end
   
   # if we don't have at least two addresses, we should fail, as how can we find a midpoint with only one place.
   if addresses.length < 2
-    raise error, "Error: not enough addresses sent"
+    raise error "Input Error: not enough addresses entered. Only #{addresses.length} addresses entered. At least 2 are required"
   end
 
   # manipulate the addresses array, to convert the postcodes or addresses into coordinates in the form of radians.
@@ -151,7 +156,7 @@ get '/lookup' do
     if ((result.lat).kind_of? Float ) && ((result.lng).kind_of? Float)
        [to_radians(result.lat), to_radians(result.lng)]
     else
-      raise error, "Error #{a} is not a valid address input."
+      raise error "Validation Error: #{a} is not a valid address input.".to_json
     end
   end 
 
@@ -160,8 +165,21 @@ get '/lookup' do
 
   #if food type is specified, then use it, otherwise, just rely on yelp to
   #make a good choice!
-  #
+  #If food type is one of a popular type, then specify that as a filter, otherwise rely on yelp's search prowess.
   foodtype = params.fetch("type", "")
+  foodcategory="restaurants"
+  case params.fetch("type")
+  when /thai/i
+    foodcategory="restaurants,thai"
+    foodtype="thai"
+  when /indian|curry/i
+    foodcategory="restaurants,indpak"
+    foodtype="indian"
+  end
+
+
+
+
 
   # create the midpoints array based on an initial looping through the addresses array to find the midpoints there 
   # midpoints is a nested array like addresses became above.
@@ -174,7 +192,6 @@ get '/lookup' do
     midpoints = loop_midpoints(addr)
   end
       
-   
   # call out to Yelp using the yelpster gem to find a restaurant of the right type close to our midpoint
   # we call midpoints[0] because that's the first (and only remaining) element int he midpoint array
   # and pass the lat and long in accordingly.
@@ -189,13 +206,17 @@ get '/lookup' do
               :radius_filter => 40000,
               :limit => 1,
               :sort => 2,
-              :category => "restaurants"
+              :category => foodcategory
                )
  
   response = client.search(request)
   #finally we output with some text.
   #this bit is still TBD, with some basic output given for debugging purposes
   #"the best restaurant to go to is #{response.fetch("businesses")[0].fetch("name")} and its address is #{response.fetch("businesses")[0].                 fetch("location").fetch("address")[0]}  #{response.fetch("businesses")[0].fetch("location").fetch("postal_code")}"
-  "#{response.fetch('businesses')[0]}"
+  if response.has_key?('businesses')
+    "#{response.fetch('businesses')[0]}"
+  else
+    raise error "Search Error: No results found near your midpoint which was determined to be #{to_degrees(midpoints[0][0])}, #{to_degrees(midpoints[0][1])}"
+  end
 
 end
