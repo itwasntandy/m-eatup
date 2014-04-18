@@ -178,7 +178,7 @@ def refine_food(food)
   when /french|france/i
     food["category"] << "french"
     food["type"] ="french restaurant"
-  when /italian|italy|italia/i
+  when /ital(ian|y)/i
     food["category"] << "italian"
     food["type"] = "italian restaurant"
    when /fish|seafood/i
