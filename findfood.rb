@@ -1,6 +1,6 @@
 #This is a simple app to try to find the best place for a group of friends to meet up and eat.
 #Normally this would be broken down into a number of classes, but because I'm just sending a gist
-#I've left the various methods in the one file and not broken them out.:w
+#I've left the various methods in the one file and not broken them out.
 #The app will take input in the form of a bunch of address[] parameters in a uri query string and 
 #food type via the optional type parameter.
 #It then calculates an appropriate midpoint through iterating through the inputted addresses
@@ -9,9 +9,9 @@
 #To help with debugging and improving quality along the way it logs request parameters and results to a database.
 #For now this is a MySQL DB, should there ever be more than just me using this, I'll rethink that decision.
 #For now I've wrapped all DB queries in such a way that it is easy to disable it, and any failure with the DB during a request will cause logging ot be disabled
-#for the rest of the rquest
+#for the rest of the request
 #The other reason for logging the event into the DB, is I would like to use them to allow users to schedule event
-#and have others sign up to them.
+#and have others sign up to them. This is a TBD.
 #Something akin to Doodle, but taking it much further as the app would chose not only the best date, but also the best location, and a restaurant.
 #If I were able to hook it up to the Google Maps Routing API, it could then send out directions to each person, and reminders prior to the event.
 #Once all that is done, being able to hook up to the OpenTable API to book a table on the scheduled date for everyone who can make it, at the appropriate restaurant
@@ -58,7 +58,6 @@ rescue
 end
 
 #Configure the yelp client provided that we have a yelp config to try
-#
 if config.has_key?("yelp")
   Yelp.configure(:yws_id => config["yelp"]["ywsid"],
                  :consumer_key => config["yelp"]["consumer_key"],
