@@ -302,7 +302,7 @@ class FoodFinder
       cultivated_response = [response.fetch('businesses')[seed]['name'], response.fetch('businesses')[seed]['location']['display_address']].join(', ')
       google_query = [response.fetch('businesses')[seed]['name'], response.fetch('businesses')[seed]['location']['display_address']].join(' ')
       google_query = URI.escape(google_query)
-      cultivated_response = [cultivated_response, "http://www.google.com/#q=#{google_query}"].join(' ')
+      cultivated_response = [cultivated_response, "https://www.google.com/#q=#{google_query}"].join(' ')
       cultivated_response = [cultivated_response, response.fetch('businesses')[seed]['rating_img_url']].join('  ')
       return cultivated_response
     else
