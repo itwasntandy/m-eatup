@@ -56,7 +56,7 @@ class ZulipBot
 	end
 
 	#get new events out of the queue
-	def get_events(regex, food_finder, yelp_client, logger)
+	def get_events(regex, food_finder, logger)
 		uri = URI("https://api.zulip.com/v1/events")
 		params = {last_event_id: @last_event_id, queue_id: @queue_id}
 		uri.query = URI.encode_www_form(params)
@@ -69,13 +69,13 @@ class ZulipBot
 		unless @current_events["events"].nil?
             # we don't care much about heartbeats, so shouldn't try to parse them
             unless @current_events["events"][0]["type"] == 'heartbeat'
-                extract_message(@current_events, regex, food_finder, yelp_client, logger)
+                extract_message(@current_events, regex, food_finder, logger)
             end
 		end
 	end
 
 	#check events' content for regex matches
-	def extract_message(events_hash, regex, food_finder, yelp_client, logger)
+	def extract_message(events_hash, regex, food_finder, logger)
 		events_hash["events"].each do |event|
             if event["message"]["type"] == "private"
                 subject = event["message"]["subject"]
@@ -83,14 +83,14 @@ class ZulipBot
                 # don't want to search for our bot's name
                 content = content.sub(/^\@\*\*YelpFoodFinder\*\*\ /, '')
                 puts content
-                message = food_finder.lookup(content, yelp_client, logger)
+                message = food_finder.lookup(content, logger)
                 self.send_pm(event["message"]["sender_email"], message)
 			elsif event["message"]["content"].downcase.match(regex)
 				stream = event["message"]["display_recipient"]
 				subject = event["message"]["subject"]
                 content = event["message"]["content"]
                 content = content.sub(/^\@\*\*YelpFoodFinder\*\*\ /, '')
-				message = food_finder.lookup(content, yelp_client, logger)
+				message = food_finder.lookup(content, logger)
                 self.send_stream_msg(stream, subject, message)
            	end
 			@last_event_id = event["message"]["id"] + 1
@@ -107,11 +107,7 @@ rescue
 end
 
 if config.has_key?("yelp")
-  Yelp.configure(:yws_id => config["yelp"]["ywsid"],
-                 :consumer_key => config["yelp"]["consumer_key"],
-                 :consumer_secret => config["yelp"]["consumer_secret"],
-                 :token => config["yelp"]["token"],
-                 :token_secret => config["yelp"]["token_secret"])
+  food_finder = FoodFinder.new(config["yelp"])
 else
   raise "Could not find yelp configuration"
 end
@@ -123,13 +119,12 @@ else
   raise "could not find zulip config"
 end
 
+if config.has_key?("database")
+    logger = DBLogger.new(config["database"])
+end
 
-logger = DBLogger.new(config["database"])
-
-yelp_client = Yelp::Client.new
-food_finder = FoodFinder.new
 
 loop do
-    food_bot.get_events(/yelpfoodfinder/, food_finder, yelp_client, logger)
+    food_bot.get_events(/yelpfoodfinder/, food_finder, logger)
 end
 

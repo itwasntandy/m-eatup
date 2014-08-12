@@ -22,7 +22,6 @@
 #i.e. Andrew is happy to go by foot, car or public transport
 #Will is happy to go by foot, bicyle or public transport
 #Harry is happy to go by public transport, and walk no more than 10 minutes
-#require 'sinatra'
 require 'cgi'
 require 'json'
 require 'geokit'
@@ -99,8 +98,16 @@ class DBLogger
   end
 end
 
-
 class FoodFinder
+   attr_accessor :yelp_client
+   def initialize(config)
+     Yelp.configure(:yws_id => config["ywsid"],
+                    :consumer_key => config["consumer_key"],
+                   :consumer_secret => config["consumer_secret"],
+                    :token => config["token"],
+                    :token_secret => config["token_secret"])  
+     @yelp_client = Yelp::Client.new()
+   end
   
   #two simple methods to convert from radians into degrees and vice versa
   def to_radians(n)
@@ -209,7 +216,7 @@ class FoodFinder
   
   #example URL:
   #http://localhost:4567/lookup?address[]=ec1v4ex&address[]=co43sq&address[]=wc1b5ha&type=thai#env-info
-  def lookup(content, yelp_client, logger)
+  def lookup(content, logger)
       #puts content
       split_content = []
       split_content = content.split(',')
