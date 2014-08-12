@@ -183,9 +183,9 @@ class FoodFinder
   def refine_food(food)  
     case food["type"]
     when /coffee/i
-      food["type"] = "coffee"
+      food["category"] = "coffee"
     when /bar/i
-      food["type"] = "bar"
+      food["category"] = "bar"
     when /thai/i
       food["category"] << "thai"
       food["type"] = "thai restaurant"
