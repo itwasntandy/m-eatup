@@ -1,0 +1,18 @@
+# The config file needs to contain credentials for all the remote services used.
+# You can sign up for a YELP developer account here: http://www.yelp.com/developers
+# you can sign up for a MySQL db (from the free tier) with AWS: http://aws.amazon.com/rds
+# You can sign up for a zulip account: https://www.zulip.com/signup/
+database:
+  host: "localhost"
+  user: "muser"
+  passwd: ""
+  dbname: ""
+yelp:
+  ywsid: ""
+  consumer_key: ""
+  consumer_secret: ""
+  token: ""
+  token_secret: ""
+zulip:
+  username: ""
+  apikey: ""

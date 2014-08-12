@@ -1,27 +1,21 @@
 #This is a simple app to try to find the best place for a group of friends to meet up and eat.
-#Normally this would be broken down into a number of classes, but because I'm just sending a gist
-#I've left the various methods in the one file and not broken them out.
-#The app will take input in the form of a bunch of address[] parameters in a uri query string and 
-#food type via the optional type parameter.
-#It then calculates an appropriate midpoint through iterating through the inputted addresses
-#and looking for the center of the great circle path where each pair intersect
-#it then calls out to the Yelp! API to find suitable restaurants near there, and outputs that to the requester.
+#it has been reworked to be useful as a Zulip Bot.
+#It takes input in the form of food type (e.g. Thai), defaults to an address of 455 broadway, or otherwise accepts a comma seperated list of addresses
+#and then queries yelp to find the most appropriate location.
+#
+#You can message it in a number of different ways to get a (hopefully) useful response:
+
+#1) Send it just a request for a food type in the food stream
+#   - e.g.: @YelpFoodFinder coffee #with this it defaults to your address as 455 Broadway New York
+#2) Send it a request for a food type and a single address with a comma between food type and address
+#   - e.g. @YelpFoodFinder thai, W 18th Street New York # with this it tries to find food near your inputted address
+#3) Send it a request for a food type, and multiple addresses (up to 8)
+#   - e.g. @YelpFoodFinder thai, W 18th Street New York, 455 Broadway New York #with this it determines the geographic midpoint, and tries to find food near that.
+#It always responds with just 1 place, and its yelp rating, however behind the scenes it asks Yelp for the top 10, and then randomly responds with 1 from there, to ensure a bit of variety.
+
 #To help with debugging and improving quality along the way it logs request parameters and results to a database.
 #For now this is a MySQL DB, should there ever be more than just me using this, I'll rethink that decision.
-#For now I've wrapped all DB queries in such a way that it is easy to disable it, and any failure with the DB during a request will cause logging ot be disabled
-#for the rest of the request
-#The other reason for logging the event into the DB, is I would like to use them to allow users to schedule event
-#and have others sign up to them. This is a TBD.
-#Something akin to Doodle, but taking it much further as the app would chose not only the best date, but also the best location, and a restaurant.
-#If I were able to hook it up to the Google Maps Routing API, it could then send out directions to each person, and reminders prior to the event.
-#Once all that is done, being able to hook up to the OpenTable API to book a table on the scheduled date for everyone who can make it, at the appropriate restaurant
-#would be the icing on the cake.
-#In the future it should deal with edge cases better - eg. the midpoint between london and paris is over the sea, so there is no restaurant close to the midpoint.
-#Also in the future it would be good to hook up to a routing API, as the geographic midpoint may in some cases take longer to get to then going from point A to point B.
-#and this will allow people to specify method of travel too.
-#i.e. Andrew is happy to go by foot, car or public transport
-#Will is happy to go by foot, bicyle or public transport
-#Harry is happy to go by public transport, and walk no more than 10 minutes
+#For now I've wrapped all DB queries in such a way that it is easy to disable it, and any failure with the DB during a request will cause logging to be disabled for the rest of the request
 require 'cgi'
 require 'json'
 require 'openssl'
@@ -188,6 +182,10 @@ class FoodFinder
   # similarly searching for "thai" in rome, returns by default a massage palour. Augumenting thestring with restaurant again helps here.
   def refine_food(food)  
     case food["type"]
+    when /coffee/i
+      food["type"] = "coffee"
+    when /bar/i
+      food["type"] = "bar"
     when /thai/i
       food["category"] << "thai"
       food["type"] = "thai restaurant"
@@ -211,12 +209,6 @@ class FoodFinder
   end
   
   
-#  log = DBLogger.new(config["database"])
-  
-  #error { @error = request.env['sinatra_error'] ; haml :'500' }
-  
-  #example URL:
-  #http://localhost:4567/lookup?address[]=ec1v4ex&address[]=co43sq&address[]=wc1b5ha&type=thai#env-info
   def lookup(content, logger)
       #puts content
       split_content = []
@@ -236,25 +228,17 @@ class FoodFinder
     #which have shown in testing to not work as expected.
     food = Hash.new
     food["category"] = "[restaurants]"
-    #if params.has_key?("type")
-    #  food["type"] = params.fetch("type")
-      food["type"] = split_content[0] 
-      food = refine_food(food)
+    food["type"] = split_content[0] 
+    food = refine_food(food)
   
-    #eventid = 0
     eventid = logger.event(food)
     #create an array containing all the addresses inputted
-    #n.b. when making a query manually you need to pass parameters in the form of:
-    #address[]=ec1v4ex&address[]=co43sq .. because otherwise sinatra creates a string named address
-    #rather than an array
- #   if params.has_key?("address")
     input_addresses = []
     length = split_content.length-1
     for i in 1..length do
       input_addresses[i-1] = split_content[i]
     end
    
-    #STDOUT.writeln input_addresses.length
     # if we don't have at least two addresses, we should fail, as how can we find a midpoint with only one place.
     # Create an addresses array from the input_addresses array by converting the postcodes or addresses into coordinates in the form of radians.
     # we call the map_addresses method defined above to do this.
@@ -279,12 +263,11 @@ class FoodFinder
         midpoints = loop_midpoints(addr)
       end
       logger.midpoint(eventid,midpoints[0])
-  
     end
-        # call out to Yelp using the yelpster gem to find a restaurant of the right type close to our midpoint
-      # we call midpoints[0] because that's the first (and only remaining) element int he midpoint array
+      # call out to Yelp using the yelpster gem to find a restaurant of the right type close to our midpoint
+      # we call midpoints[0] because that's the first (and only remaining) element in the midpoint array
       # and pass the lat and long in accordingly.
-      # we specify limit of 1, as we just want the first returned restaurant for now
+      # we specify limit of 10 so that can offer some variety in our responses (below)
       # we specify sort type of 1 which is to find the closest (recommended) one to our location
       # This because we specify a wide search radius to deal with cases where the midpoint may be a little away
       # from the nearest civilization!
@@ -311,7 +294,6 @@ class FoodFinder
     #We catch the case if the search doesn't return any result.
     #Again we log the put from this, so we can analyze it later.
     if response.has_key?('businesses')
-      #[response.fetch('businesses')[0]('name'), response.fetch('businesses')[0]('display_address')].join(' ')
       random_seed = Random.new
       max_val = response.fetch('businesses').length - 1
       seed = random_seed.rand(0..max_val)
