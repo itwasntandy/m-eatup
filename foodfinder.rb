@@ -24,6 +24,7 @@
 #Harry is happy to go by public transport, and walk no more than 10 minutes
 require 'cgi'
 require 'json'
+require 'openssl'
 require 'geokit'
 require 'yelpster'
 require 'uri'
@@ -310,12 +311,12 @@ class FoodFinder
     #We catch the case if the search doesn't return any result.
     #Again we log the put from this, so we can analyze it later.
     if response.has_key?('businesses')
-      logger.result(eventid,response['businesses'])
       #[response.fetch('businesses')[0]('name'), response.fetch('businesses')[0]('display_address')].join(' ')
       random_seed = Random.new
       max_val = response.fetch('businesses').length - 1
       seed = random_seed.rand(0..max_val)
 
+      logger.result(eventid,response['businesses'][seed])
       cultivated_response = [response.fetch('businesses')[seed]['name'], response.fetch('businesses')[seed]['location']['display_address']].join(', ')
       cultivated_response = [cultivated_response, response.fetch('businesses')[seed]['rating_img_url']].join('  ')
       return cultivated_response

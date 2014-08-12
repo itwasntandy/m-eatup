@@ -7,3 +7,5 @@ gem 'geokit'
 gem 'yelpster'
 gem 'shotgun'
 gem 'mysql2'
+gem 'geokit'
+
