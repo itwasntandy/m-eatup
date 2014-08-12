@@ -30,6 +30,8 @@ require 'yelpster'
 require 'uri'
 require 'mysql2'
 require 'yaml'
+# uses https://github.com/anna2/dude_bot for the zulip API integration
+#require './zulipbot.rb'
 
 #Decided it would be a good idea to move the config variables out of the main app
 #so this is done through reading a yaml file and creating a hash of hashes for this.
@@ -49,6 +51,10 @@ require 'yaml'
 #   consumer_secret: ""
 #   token: ""
 #   token_secret: ""
+# zulip:
+#   username: ""
+#   apikey: ""
+#
 begin
   approot = File.expand_path(File.dirname(__FILE__))
   rawconfig = File.read(approot + "/config.yml")
@@ -66,6 +72,13 @@ if config.has_key?("yelp")
                  :token_secret => config["yelp"]["token_secret"])
 else
   raise "Could not find yelp configuration"
+end
+
+if config.has_key?("zulip")
+  zulip_username = config["zulip"]["username"]
+  zulip_apikey = config["zulip"]["apikey"]
+else
+  raise "could not find zulip config"
 end
 
 class DBLogger
@@ -248,30 +261,28 @@ get '/lookup' do
     raise error "Input Error: no addresses inputted"
   end
   
-  # if we don't have at least two addresses, we should fail, as how can we find a midpoint with only one place.
-  if input_addresses.length < 2
-    raise error "Input Error: not enough addresses entered. Only #{input_addresses.length} addresses entered. At least 2 are required"
-  end
-
   # Create an addresses array from the input_addresses array by converting the postcodes or addresses into coordinates in the form of radians.
   # we call the map_addresses method defined above to do this.
   addresses = map_addresses(log,eventid,input_addresses)
   # manipulate the addresses array again, this time to get the coordinates sorted.
   addresses.sort!
+  if addresses.length < 2
+      midpoints = addresses
+  else
   
-  # create the midpoints array based on an initial looping through the addresses array to find the midpoints there 
-  # midpoints is a nested array like addresses became above.
-  midpoints = loop_midpoints(addresses)
+    # create the midpoints array based on an initial looping through the addresses array to find the midpoints there 
+    # midpoints is a nested array like addresses became above.
+    midpoints = loop_midpoints(addresses)
 
-  # if the length of the midpoint array is already 1, due to only 2 addresses being passed the below will be skipped
-  # Otherwise keep iterating through the midpoints, until there is 1.
-  # Again we want to log the output from this to help in debugging in the event of strange results
-  while midpoints.length > 1 do
-    addr = midpoints.sort!
-    midpoints = loop_midpoints(addr)
+    # if the length of the midpoint array is already 1, due to only 2 addresses being passed the below will be skipped
+    # Otherwise keep iterating through the midpoints, until there is 1.
+    # Again we want to log the output from this to help in debugging in the event of strange results
+    while midpoints.length > 1 do
+      addr = midpoints.sort!
+      midpoints = loop_midpoints(addr)
+    end
+    log.midpoint(eventid,midpoints[0])
   end
-  log.midpoint(eventid,midpoints[0])
-
   # call out to Yelp using the yelpster gem to find a restaurant of the right type close to our midpoint
   # we call midpoints[0] because that's the first (and only remaining) element int he midpoint array
   # and pass the lat and long in accordingly.
@@ -302,7 +313,13 @@ get '/lookup' do
   #Again we log the put from this, so we can analyze it later.
   if response.has_key?('businesses')
     log.result(eventid,response['businesses'][0])
-    "#{response.fetch('businesses')[0]}"
+    #[response.fetch('businesses')[0]('name'), response.fetch('businesses')[0]('display_address')].join(' ')
+    cultivated_response = [response.fetch('businesses')[0]['name'], response.fetch('businesses')[0]['location']['display_address']].join(', ')
+    cultivated_response = [cultivated_response, response.fetch('businesses')[0]['rating_img_url'], response.fetch('businesses')[0]['image_url']].join('')
+    return cultivated_response
+    #cultivated_response = [response.fetch('businesses')[0]('name'), response.fetch('businesses')[0]('display_address')].join(' ')
+#    puts cultivated_response
+    #"#{response.fetch('businesses')[0]}"
   else
     raise error "Search Error: No results found near your midpoint which was determined to be #{to_degrees(midpoints[0][0])}, #{to_degrees(midpoints[0][1])}"
   end
