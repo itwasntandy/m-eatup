@@ -82,7 +82,6 @@ class ZulipBot
                 content = event["message"]["content"]
                 # don't want to search for our bot's name
                 content = content.sub(/^\@\*\*YelpFoodFinder\*\*\ /, '')
-                puts content
                 message = food_finder.lookup(content, logger)
                 self.send_pm(event["message"]["sender_email"], message)
 			elsif event["message"]["content"].downcase.match(regex)

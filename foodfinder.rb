@@ -300,6 +300,7 @@ class FoodFinder
 
       logger.result(eventid,response['businesses'][seed])
       cultivated_response = [response.fetch('businesses')[seed]['name'], response.fetch('businesses')[seed]['location']['display_address']].join(', ')
+      cultivated_response = [cultivated_response, URI.escape("http://www.google.com/#q=#{cultivated_response}")].join(' ')
       cultivated_response = [cultivated_response, response.fetch('businesses')[seed]['rating_img_url']].join('  ')
       return cultivated_response
     else
