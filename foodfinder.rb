@@ -302,8 +302,9 @@ class FoodFinder
       cultivated_response = [response.fetch('businesses')[seed]['name'], response.fetch('businesses')[seed]['location']['display_address']].join(', ')
       google_query = [response.fetch('businesses')[seed]['name'], response.fetch('businesses')[seed]['location']['display_address']].join(' ')
       google_query = URI.escape(google_query)
-      cultivated_response = [cultivated_response, "https://www.google.com/#q=#{google_query}"].join(' ')
-      cultivated_response = [cultivated_response, response.fetch('businesses')[seed]['rating_img_url']].join('  ')
+      cultivated_response = "[#{cultivated_response}](https://www.google.com/#q=#{google_query})"
+      cultivated_response = [cultivated_response, "[](#{response.fetch('businesses')[seed]['rating_img_url']})"].join('  ')
+      cultivated_response = [cultivated_response, response.fetch('businesses')[seed]['snippet_text']].join('  ')
       return cultivated_response
     else
       return "Search Error: No results found near your midpoint which was determined to be #{to_degrees(midpoints[0][0])}, #{to_degrees(midpoints[0][1])}"

@@ -46,7 +46,10 @@ class ZulipBot
 	def register(event_type)
 		uri = URI("https://api.zulip.com/v1/register")
 		req = Net::HTTP::Post.new(uri)
-		req.set_form_data('event_types' => event_type)
+        #form_data = (:event_types => event_type, :apply_markdown => :true)
+		req.set_form_data('event_types' => event_type, 'apply_markdown' => 'true')
+		#req.set_form_data(form_data)
+        #req.set_form_data('apply_markdown' => true)
 		req.basic_auth(@email, @api_key)
 		res = Net::HTTP.start(uri.hostname, uri.port, :use_ssl => uri.scheme == 'https')  {|http|
 			http.request(req)
