@@ -296,6 +296,8 @@ class FoodFinder
     if response.has_key?('businesses')
       random_seed = Random.new
       max_val = response.fetch('businesses').length - 1
+      puts max_val
+
       seed = random_seed.rand(0..max_val)
 
       logger.result(eventid,response['businesses'][seed])
