@@ -293,14 +293,9 @@ class FoodFinder
     #For now we are just outputting the yelp json verbatim as it contains all the useful information
     #We catch the case if the search doesn't return any result.
     #Again we log the put from this, so we can analyze it later.
-    if response.has_key?('businesses')
+    if response.has_key?('businesses') && response.fetch('businesses').length >0
       random_seed = Random.new
-      puts response.fetch('businesses')
-      max_val = response.fetch('businesses').length - 0
-      if max_val < 0
-          max_val = 0
-      end
-      puts max_val
+      max_val = response.fetch('businesses').length - 1
 
       seed = random_seed.rand(0..max_val)
 
