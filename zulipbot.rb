@@ -93,7 +93,8 @@ class ZulipBot
 				stream = event["message"]["display_recipient"]
 				subject = event["message"]["subject"]
                 content = event["message"]["content"]
-                content = content.sub(/^\@\*\*YelpFoodFinder\*\*\ /, '')
+                content = content.sub(/^<p><span class="user-mention" data-user-email="yelpfoodfinder-bot@students.hackerschool.com">@YelpFoodFinder<\/span>\ /, '')
+                content = content.sub(/<\/p>$/, '')
 				message = food_finder.lookup(content, logger)
                 self.send_stream_msg(stream, subject, message)
            	end
