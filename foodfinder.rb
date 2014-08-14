@@ -295,7 +295,10 @@ class FoodFinder
     #Again we log the put from this, so we can analyze it later.
     if response.has_key?('businesses')
       random_seed = Random.new
-      max_val = response.fetch('businesses').length - 1
+      max_val = response.fetch('businesses').length - 0
+      if max_val < 0
+          max_val = 0
+      end
       puts max_val
 
       seed = random_seed.rand(0..max_val)
