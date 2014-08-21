@@ -10,11 +10,13 @@ Determine the best place for you and your friends to meet
 
 * Rename config-example.yml to config.yml
   * populate the config with settings for MySQL DB, Yelp API and Zulip API
+
 ### Zulip Bot
 * Run with ruby zulipbot.rb - currently it runs attached to the parent process, it doesn't daemonize
   * I've been running it in screen
 * Query it with @<botname> in zulip or make it register to join a stream
-## Sinatra instance
+
+### Sinatra instance
 * Run with ruby run_under_sinatra.rb (or perhaps undershotgun)
 * Query it with "http://127.0.0.1:4567/lookup?address[]=455%20broadway,%20new%20york&address[]=125%20W%2055th%20St,%20new%20york&type=date"
 
