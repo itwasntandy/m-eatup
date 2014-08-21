@@ -10,6 +10,7 @@ GEM
     rack (1.5.2)
     rack-protection (1.5.3)
       rack
+    redcarpet (3.1.2)
     shotgun (0.9)
       rack (>= 1.0)
     sinatra (1.4.5)
@@ -28,6 +29,7 @@ DEPENDENCIES
   geokit
   json
   mysql2
+  redcarpet
   shotgun
   sinatra
   yelpster
