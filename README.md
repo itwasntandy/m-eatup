@@ -25,3 +25,4 @@ Determine the best place for you and your friends to meet
    * i.e. Andrew is happy to go by foot, car or public transport
    * Will is happy to go by foot, bicyle or public transport
    * Harry is happy to go by public transport, and walk no more than 10 minutes
+
