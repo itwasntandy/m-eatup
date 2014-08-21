@@ -16,8 +16,6 @@
 #To help with debugging and improving quality along the way it logs request parameters and results to a database.
 #For now this is a MySQL DB, should there ever be more than just me using this, I'll rethink that decision.
 #For now I've wrapped all DB queries in such a way that it is easy to disable it, and any failure with the DB during a request will cause logging to be disabled for the rest of the request
-require 'cgi'
-require 'json'
 require 'openssl'
 require 'geokit'
 require 'yelpster'
