@@ -6,17 +6,22 @@ Determine the best place for you and your friends to meet
 
 
 =====
-** Instructions for use **
+## Instructions for use
 
 * Rename config-example.yml to config.yml
   * populate the config with settings for MySQL DB, Yelp API and Zulip API
+### Zulip Bot
 * Run with ruby zulipbot.rb - currently it runs attached to the parent process, it doesn't daemonize
   * I've been running it in screen
+* Query it with @<botname> in zulip or make it register to join a stream
+## Sinatra instance
+* Run with ruby run_under_sinatra.rb (or perhaps undershotgun)
+* Query it with "http://127.0.0.1:4567/lookup?address[]=455%20broadway,%20new%20york&address[]=125%20W%2055th%20St,%20new%20york&type=date"
 
 
+## Future enhancements
 
-
-* The other reason for logging the event into the DB, is I would like to use them to allow users to schedule event and have others sign up to them. This is a TBD.
+* The reason for logging the event into the DB, is I would like to use them to allow users to schedule event and have others sign up to them. This is a TBD.
    * Something akin to Doodle, but taking it much further as the app would chose not only the best date, but also the best location, and a restaurant.
 * If I were able to hook it up to the Google Maps Routing API, it could then send out directions to each person, and reminders prior to the event.
 * Once all that is done, being able to hook up to the OpenTable API to book a table on the scheduled date for everyone who can make it, at the appropriate restaurant would be the icing on the cake
@@ -25,4 +30,5 @@ Determine the best place for you and your friends to meet
    * i.e. Andrew is happy to go by foot, car or public transport
    * Will is happy to go by foot, bicyle or public transport
    * Harry is happy to go by public transport, and walk no more than 10 minutes
+* Daemonize the process to make it easier to run as a service
 
