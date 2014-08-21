@@ -2,6 +2,7 @@ require 'net/http'
 require 'json'
 require 'mysql2'
 require './foodfinder.rb'
+require './dblogger.rb'
 
 class ZulipBot
 	def initialize(email, api_key)
