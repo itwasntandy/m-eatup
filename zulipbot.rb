@@ -66,16 +66,26 @@ class ZulipBot
 		uri.query = URI.encode_www_form(params)
 		req = Net::HTTP::Get.new(uri)
 		req.basic_auth(@email, @api_key)
-		res = Net::HTTP.start(uri.hostname, uri.port, :use_ssl => uri.scheme == 'https')  {|http|
-			http.request(req)
-		}
-		@current_events = JSON.parse(res.body)
-		unless @current_events["events"].nil?
-            # we don't care much about heartbeats, so shouldn't try to parse them
-            unless @current_events["events"][0]["type"] == 'heartbeat'
-                extract_message(@current_events, regex, food_finder, logger)
-            end
-		end
+		begin
+            res = Net::HTTP.start(uri.hostname, uri.port, :use_ssl => uri.scheme == 'https')  {|http|
+			    http.request(req)
+		    }
+        rescue
+            puts "HTTP request to Zulip failed for some reason"
+        end
+        begin
+            @current_events = JSON.parse(res.body)
+		    unless @current_events["events"].nil?
+                # we don't care much about heartbeats, so shouldn't try to parse them
+                unless @current_events["events"][0]["type"] == 'heartbeat'
+                        extract_message(@current_events, regex, food_finder, logger)
+                end
+		    end
+        rescue
+            puts "parsing the response from zulip failed, probably they're having problems"
+            puts "sleeping for 5 seconds to give them a chance to recover"
+            sleep(5.seconds)
+        end
 	end
 
 	#check events' content for regex matches
