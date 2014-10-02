@@ -84,7 +84,7 @@ class ZulipBot
         rescue
             puts "parsing the response from zulip failed, probably they're having problems"
             puts "sleeping for 5 seconds to give them a chance to recover"
-            sleep(5.seconds)
+            sleep(5)
         end
 	end
 
