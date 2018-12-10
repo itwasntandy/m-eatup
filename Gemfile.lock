@@ -8,7 +8,7 @@ GEM
     mysql2 (0.3.16)
     oauth (0.4.7)
     rack (1.6.11)
-    rack-protection (1.5.3)
+    rack-protection (1.5.5)
       rack
     redcarpet (3.1.2)
     shotgun (0.9)
